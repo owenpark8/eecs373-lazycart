@@ -45,6 +45,8 @@ CAN_HandleTypeDef hcan1;
 I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN PV */
+Can* can = can_ctor(&hcan1, 0x01);
+can_filter_only_device_id(can);
 
 /* USER CODE END PV */
 
@@ -59,6 +61,10 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+	can_receive(can);
+}
 
 /* USER CODE END 0 */
 
