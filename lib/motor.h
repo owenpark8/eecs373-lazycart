@@ -30,6 +30,11 @@ Motor* motor_ctor(TIM_HandleTypeDef *pwm_tim, uint32_t pwm_tim_channel, GPIO_Typ
     return motor;
 }
 
+// TODO:
+void set_pwm_ccr(Motor* motor, uint32_t ccr_val) {
+    __HAL_TIM_SET_COMPARE(motor->pwm_tim, motor->pwm_tim_channel, ccr_val);
+}
+
 void start_pwm(Motor* motor) {
     HAL_TIM_PWM_Start(motor->pwm_tim, motor->pwm_tim_channel);
 }
@@ -37,6 +42,10 @@ void start_pwm(Motor* motor) {
 void stop_pwm(Motor* motor) {
     HAL_TIM_PWM_Stop(motor->pwm_tim, motor->pwm_tim_channel);
 }
+
+// TODO
+// void set_throttle(Motor* motor) {
+// }
 
 void change_direction(Motor* motor) {
     HAL_GPIO_TogglePin(motor->forward_gpio, motor->forward_pin);
