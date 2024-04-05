@@ -1,1 +1,1 @@
-lib/avgqueue.h
+../../../lib/avgqueue.h
