@@ -17,7 +17,7 @@ USonic* usonic_ctor() {
     if (!usonic) Error_Handler();
     init(usonic->last_five_values);
     for (int i = 0; i < 5; ++i) {
-        push(usonic->last_five_values, 0);
+        push(usonic->last_five_values, 0U);
     }
     return usonic;
 }

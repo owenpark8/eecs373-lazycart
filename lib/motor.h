@@ -15,7 +15,7 @@ typedef struct Motor {
     GPIO_PinState forward_state;
 } Motor;
 
-Motor* motor_ctor(TIM_HandleTypeDef *pwm_tim, uint32_t pwm_tim_channel, GPIO_TypeDef *forward_gpiox, uint16_t forward_pin, GPIO_TypeDef *backward_gpiox, uint16_t backward_pin) {
+Motor* motor_ctor(TIM_HandleTypeDef *pwm_tim, uint32_t pwm_tim_channel, GPIO_TypeDef *pwm_gpiox, uint16_t pwm_pin, GPIO_TypeDef *forward_gpiox, uint16_t forward_pin, GPIO_TypeDef *backward_gpiox, uint16_t backward_pin) {
     Motor* motor = (Motor*)malloc(sizeof(Motor));
     if (!motor) Error_Handler();
     motor->pwm_tim = pwm_tim;

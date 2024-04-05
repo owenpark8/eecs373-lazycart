@@ -12,16 +12,19 @@ uint8_t transmit_buffer[6] = {0xae, 0xc1, 0x20, 0x2, 0x1, 0x1};
 
 typedef struct Pixy {
     I2C_HandleTypeDef* hi2c;
+    TIM_HandleTypeDef* update_htim;
     union {
         uint8_t raw_data[20];
         uint16_t data[10];
     } block_buffer;
 } Pixy;
 
-Pixy* pixy_ctor(I2C_HandleTypeDef *hi2c) {
+Pixy* pixy_ctor(I2C_HandleTypeDef *hi2c, TIM_HandleTypeDef *update_htim) {
     Pixy* pixy = (Pixy*)malloc(sizeof(Pixy));
     if (!pixy) Error_Handler();
+    if(HAL_TIM_Base_Start_IT(update_htim) != HAL_OK) Error_Handler();
     pixy->hi2c = hi2c;
+    pixy->update_htim = update_htim;
     return pixy;
 }
 

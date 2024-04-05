@@ -59,6 +59,28 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define USONIC_L_ECHO_Pin GPIO_PIN_6
+#define USONIC_L_ECHO_GPIO_Port GPIOF
+#define USONIC_R_ECHO_Pin GPIO_PIN_0
+#define USONIC_R_ECHO_GPIO_Port GPIOA
+#define R_FORWARD_Pin GPIO_PIN_13
+#define R_FORWARD_GPIO_Port GPIOF
+#define R_BACKWARD_Pin GPIO_PIN_14
+#define R_BACKWARD_GPIO_Port GPIOF
+#define L_FORWARD_Pin GPIO_PIN_15
+#define L_FORWARD_GPIO_Port GPIOF
+#define L_BACKWARD_Pin GPIO_PIN_0
+#define L_BACKWARD_GPIO_Port GPIOG
+#define PWM_RIGHT_SERVO_Pin GPIO_PIN_12
+#define PWM_RIGHT_SERVO_GPIO_Port GPIOD
+#define PWM_LEFT_MOTOR_Pin GPIO_PIN_14
+#define PWM_LEFT_MOTOR_GPIO_Port GPIOD
+#define PWM_RIGHT_MOTOR_Pin GPIO_PIN_15
+#define PWM_RIGHT_MOTOR_GPIO_Port GPIOD
+#define USONIC_TRIG_Pin GPIO_PIN_7
+#define USONIC_TRIG_GPIO_Port GPIOC
+#define PWM_LEFT_SERVO_Pin GPIO_PIN_7
+#define PWM_LEFT_SERVO_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

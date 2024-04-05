@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "pixy.h"
 #include "motor.h"
+#include "usonic.h"
 
 /* USER CODE END Includes */
 
@@ -51,10 +52,12 @@ TIM_HandleTypeDef htim5;
 
 /* USER CODE BEGIN PV */
 #define ULT_SONIC_TRIGGER_TIMER &htim3
-#define R_ULT_SONIC_TIMER &htim2
-#define L_ULT_SONIC_TIMER &htim5
+#define R_SONIC_ECHO_TIM &htim2
+#define L_SONIC_ECHO_TIM &htim5
 #define SERVO_PWM_TIMER &htim4
 #define MOTOR_PWM_TIMER &htim4
+
+//#define PIXY_UPDATE_TIMER &htim6
 
 /* USER CODE END PV */
 
@@ -90,12 +93,12 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-  __HAL_TIM_SET_COMPARE(SERVO_PWM_TIMER, TIM_CHANNEL_1, 65);
-  __HAL_TIM_SET_COMPARE(SERVO_PWM_TIMER, TIM_CHANNEL_2, 85);
-  HAL_TIM_PWM_Start(SERVO_PWM_TIMER, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(SERVO_PWM_TIMER, TIM_CHANNEL_2);
 
   /* USER CODE BEGIN Init */
+//  Pixy* pixy = pixy_ctor(&hi2c1, PIXY_UPDATE_TIMER);
+  Motor* right_motor = motor_ctor(MOTOR_PWM_TIMER, TIM_CHANNEL_4, GPIOD, GPIO_PIN_15, GPIOF, GPIO_PIN_13, GPIOF, GPIO_PIN_14);
+  Motor* left_motor = motor_ctor(MOTOR_PWM_TIMER, TIM_CHANNEL_3, GPIOD, GPIO_PIN_14, GPIOF, GPIO_PIN_15, GPIOG, GPIO_PIN_0);
+  USonic* right_usonic = usonic_ctor();
 
   /* USER CODE END Init */
 
@@ -114,7 +117,6 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  Pixy* pixy = pixy_ctor(&hi2c1);
 
   /* USER CODE END 2 */
 
@@ -465,9 +467,12 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   HAL_PWREx_EnableVddIO2();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOF, R_FORWARD_Pin|R_BACKWARD_Pin|L_FORWARD_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PE2 PE3 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
@@ -526,6 +531,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : R_FORWARD_Pin R_BACKWARD_Pin L_FORWARD_Pin */
+  GPIO_InitStruct.Pin = R_FORWARD_Pin|R_BACKWARD_Pin|L_FORWARD_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : L_BACKWARD_Pin */
+  GPIO_InitStruct.Pin = L_BACKWARD_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(L_BACKWARD_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PE7 PE8 PE9 PE10
                            PE11 PE12 PE13 */
@@ -646,6 +664,19 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
+  if (htim == L_SONIC_ECHO_TIM) {
+  } else if (htim == R_SONIC_ECHO_TIM) {
+
+  }
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+//    if (htim == PIXY_UPDATE_TIMER) {
+//        pixy->
+//    }
+}
 
 /* USER CODE END 4 */
 

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 typedef struct Node {
-	Node *next;
+	struct Node *next;
 	uint32_t data;
 } Node;
 
@@ -39,7 +39,6 @@ void pop(AvgQueue *q) {
 	Node *tmp = q->front;
 	q->front = q->front->next;
 	free(tmp);
-
 }
 
 void push(AvgQueue *q, uint32_t data) {
@@ -57,6 +56,10 @@ void push(AvgQueue *q, uint32_t data) {
 		q->last->next->next = NULL;
 		q->last = q->last->next;
 	}
+}
+
+uint32_t get_average(AvgQueue *q) {
+	return q->sum / q->size;
 }
 
 #endif
