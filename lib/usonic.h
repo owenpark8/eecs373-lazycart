@@ -12,14 +12,12 @@ typedef struct USonic {
     AvgQueue* last_five_values;
 } USonic;
 
-USonic* usonic_ctor() {
-    USonic* usonic = (USonic*)malloc(sizeof(USonic));
+void usonic_ctor(USonic* usonic) {
     if (!usonic) Error_Handler();
     init(usonic->last_five_values);
     for (int i = 0; i < 5; ++i) {
         push(usonic->last_five_values, 0U);
     }
-    return usonic;
 }
 void usonic_dtor(USonic* usonic) {
     free(usonic);

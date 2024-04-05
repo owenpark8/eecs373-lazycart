@@ -19,13 +19,11 @@ typedef struct Pixy {
     } block_buffer;
 } Pixy;
 
-Pixy* pixy_ctor(I2C_HandleTypeDef *hi2c, TIM_HandleTypeDef *update_htim) {
-    Pixy* pixy = (Pixy*)malloc(sizeof(Pixy));
+void pixy_ctor(Pixy* pixy, I2C_HandleTypeDef *hi2c, TIM_HandleTypeDef *update_htim) {
     if (!pixy) Error_Handler();
     if(HAL_TIM_Base_Start_IT(update_htim) != HAL_OK) Error_Handler();
     pixy->hi2c = hi2c;
     pixy->update_htim = update_htim;
-    return pixy;
 }
 
 void pixy_dtor(Pixy* pixy) {
@@ -33,27 +31,33 @@ void pixy_dtor(Pixy* pixy) {
 }
 
 void get_blocks_i2c(Pixy* pixy) {
-	  HAL_I2C_Master_Transmit(pixy->hi2c, PIXY_WR, transmit_buffer, 6, 1000);
-	  HAL_I2C_Master_Receive(pixy->hi2c, PIXY_RD, pixy->block_buffer.raw_data, 20, 1000); // block should be in our buffer
+    if (!pixy) Error_Handler();
+    HAL_I2C_Master_Transmit(pixy->hi2c, PIXY_WR, transmit_buffer, 6, 1000);
+    HAL_I2C_Master_Receive(pixy->hi2c, PIXY_RD, pixy->block_buffer.raw_data, 20, 1000); // block should be in our buffer
 }
 
 uint16_t get_x(Pixy* pixy) {
+    if (!pixy) Error_Handler();
 	return pixy->block_buffer.data[4];
 }
 
 uint16_t get_y(Pixy* pixy) {
+    if (!pixy) Error_Handler();
     return pixy->block_buffer.data[5];
 }
 
 uint16_t get_block_width(Pixy* pixy) {
+    if (!pixy) Error_Handler();
     return pixy->block_buffer.data[6];
 }
 
 uint16_t get_block_height(Pixy* pixy) {
+    if (!pixy) Error_Handler();
     return pixy->block_buffer.data[7];
 }
 
 uint16_t get_block_angle(Pixy* pixy) {
+    if (!pixy) Error_Handler();
     return pixy->block_buffer.data[8];
 }
 

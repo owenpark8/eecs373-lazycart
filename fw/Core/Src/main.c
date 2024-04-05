@@ -24,6 +24,7 @@
 #include "pixy.h"
 #include "motor.h"
 #include "usonic.h"
+#include "servo.h"
 
 /* USER CODE END Includes */
 
@@ -49,6 +50,7 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
+TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
 #define ULT_SONIC_TRIGGER_TIMER &htim3
@@ -57,7 +59,12 @@ TIM_HandleTypeDef htim5;
 #define SERVO_PWM_TIMER &htim4
 #define MOTOR_PWM_TIMER &htim4
 
-//#define PIXY_UPDATE_TIMER &htim6
+#define PIXY_UPDATE_TIMER &htim6
+
+Pixy* pixy;
+Motor* right_motor;
+Motor* left_motor;
+USonic* right_usonic;
 
 /* USER CODE END PV */
 
@@ -69,6 +76,7 @@ static void MX_TIM2_Init(void);
 static void MX_TIM5_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -95,10 +103,10 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-//  Pixy* pixy = pixy_ctor(&hi2c1, PIXY_UPDATE_TIMER);
-  Motor* right_motor = motor_ctor(MOTOR_PWM_TIMER, TIM_CHANNEL_4, GPIOD, GPIO_PIN_15, GPIOF, GPIO_PIN_13, GPIOF, GPIO_PIN_14);
-  Motor* left_motor = motor_ctor(MOTOR_PWM_TIMER, TIM_CHANNEL_3, GPIOD, GPIO_PIN_14, GPIOF, GPIO_PIN_15, GPIOG, GPIO_PIN_0);
-  USonic* right_usonic = usonic_ctor();
+  pixy_ctor(pixy, &hi2c1, PIXY_UPDATE_TIMER);
+  motor_ctor(right_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_4, GPIOD, GPIO_PIN_15, GPIOF, GPIO_PIN_13, GPIOF, GPIO_PIN_14);
+  motor_ctor(left_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_3, GPIOD, GPIO_PIN_14, GPIOF, GPIO_PIN_15, GPIOG, GPIO_PIN_0);
+  usonic_ctor(right_usonic);
 
   /* USER CODE END Init */
 
@@ -116,6 +124,7 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -450,6 +459,44 @@ static void MX_TIM5_Init(void)
 }
 
 /**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 39;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 1999;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -673,9 +720,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
-//    if (htim == PIXY_UPDATE_TIMER) {
-//        pixy->
-//    }
+    if (htim == PIXY_UPDATE_TIMER) {
+        get_blocks_i2c(pixy);
+    }
 }
 
 /* USER CODE END 4 */
