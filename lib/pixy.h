@@ -1,7 +1,7 @@
 #ifndef pixy_h
 #define pixy_h
 
-#include "main.h"
+#include "stm32l4xx_hal.h"
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -21,7 +21,7 @@ typedef struct Pixy {
 
 void pixy_ctor(Pixy* pixy, I2C_HandleTypeDef *hi2c, TIM_HandleTypeDef *update_htim) {
     if (!pixy) Error_Handler();
-    if(HAL_TIM_Base_Start_IT(update_htim) != HAL_OK) Error_Handler();
+    if (HAL_TIM_Base_Start_IT(update_htim) != HAL_OK) Error_Handler();
     pixy->hi2c = hi2c;
     pixy->update_htim = update_htim;
 }

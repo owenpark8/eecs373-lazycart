@@ -1,7 +1,7 @@
 #ifndef motor_h
 #define motor_h
 
-#include "main.h"
+#include "stm32l4xx_hal.h"
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -15,7 +15,7 @@ typedef struct Motor {
     GPIO_PinState forward_state;
 } Motor;
 
-void motor_ctor(Motor* motor, TIM_HandleTypeDef *pwm_tim, uint32_t pwm_tim_channel, GPIO_TypeDef *pwm_gpiox, uint16_t pwm_pin, GPIO_TypeDef *forward_gpiox, uint16_t forward_pin, GPIO_TypeDef *backward_gpiox, uint16_t backward_pin) {
+void motor_ctor(Motor* motor, TIM_HandleTypeDef *pwm_tim, uint32_t pwm_tim_channel, GPIO_TypeDef *forward_gpiox, uint16_t forward_pin, GPIO_TypeDef *backward_gpiox, uint16_t backward_pin) {
     if (!motor) Error_Handler();
     motor->pwm_tim = pwm_tim;
     motor->forward_gpio = forward_gpiox;
