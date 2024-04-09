@@ -1,1 +1,1 @@
-../../../lib/pressuresensor.h
+../../../lib/psensor.h
