@@ -25,8 +25,7 @@
 #include "motor.h"
 #include "usonic.h"
 #include "servo.h"
-#include "display.h"
-#include "psensor.h"
+#include "weightdisplay.h"
 
 /* USER CODE END Includes */
 
@@ -47,7 +46,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
 
 I2C_HandleTypeDef hi2c1;
 
@@ -72,15 +70,13 @@ Pixy pixy;
 Motor right_motor;
 Motor left_motor;
 USonic right_usonic;
-Display display;
-PressureSensor psensor;
+WeightDisplay wdisplay;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM5_Init(void);
@@ -127,7 +123,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_I2C1_Init();
   MX_TIM2_Init();
   MX_TIM5_Init();
@@ -141,14 +136,16 @@ int main(void)
    motor_ctor(&right_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_4, R_FORWARD_GPIO_Port, R_FORWARD_Pin, R_BACKWARD_GPIO_Port, R_BACKWARD_Pin);
    motor_ctor(&left_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_3, GPIOF, GPIO_PIN_15, GPIOG, GPIO_PIN_0);
    usonic_ctor(&right_usonic);
-   display_ctor(&display, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
+   weight_display_ctor(&wdisplay, &hadc1, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  display_credits(&display);
+  weight_display_credits(&wdisplay);
   while (1)
   {
+	  weight_display_start_read_psensor(&wdisplay);
+	  HAL_Delay(1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -227,12 +224,12 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc1.Init.OversamplingMode = DISABLE;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -242,7 +239,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Channel = ADC_CHANNEL_2;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -611,23 +608,6 @@ static void MX_TIM7_Init(void)
 }
 
 /**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMAMUX1_CLK_ENABLE();
-  __HAL_RCC_DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA1_Channel1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -852,7 +832,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	ps_get_adc_val(&psensor, hadc);
+	weight_display_psensor_adc_callback(&wdisplay);
 }
 
 /* USER CODE END 4 */
