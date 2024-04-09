@@ -20,6 +20,7 @@ void display_ctor(Display* display, SPI_HandleTypeDef* hspi, GPIO_TypeDef* csx_p
     display->ILI9225.cmd_port = cmd_port;
     display->ILI9225.cmd_pin = cmd_pin;
     lcd_init(&display->ILI9225);
+
 }
 
 void display_credits(Display* display){
