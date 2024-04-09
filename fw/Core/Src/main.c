@@ -142,10 +142,13 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   weight_display_credits(&wdisplay);
+  HAL_Delay(1000);
+  weight_display_clear(&wdisplay);
   while (1)
   {
 	  weight_display_start_read_psensor(&wdisplay);
 	  HAL_Delay(1000);
+	  weight_display_raw_adc_val(&wdisplay);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
