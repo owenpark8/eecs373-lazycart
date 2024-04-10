@@ -148,7 +148,6 @@ int main(void)
   {
 	  weight_display_start_read_psensor(&wdisplay);
 	  HAL_Delay(1000);
-	  weight_display_raw_adc_val(&wdisplay);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -675,11 +674,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF13_SAI1;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  /*Configure GPIO pin : ZERO_WEIGHT_BTN_EXTI2_Pin */
+  GPIO_InitStruct.Pin = ZERO_WEIGHT_BTN_EXTI2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(ZERO_WEIGHT_BTN_EXTI2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : CAPTURE_WEIGHT_BTN_EXTI12_Pin */
+  GPIO_InitStruct.Pin = CAPTURE_WEIGHT_BTN_EXTI12_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(CAPTURE_WEIGHT_BTN_EXTI12_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : L_BACKWARD_Pin */
   GPIO_InitStruct.Pin = L_BACKWARD_Pin;
@@ -815,6 +820,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
 }
@@ -831,6 +843,16 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     if (htim == PIXY_UPDATE_TIMER) {
         get_blocks_i2c(&pixy);
+    }
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == ZERO_WEIGHT_BTN_EXTI2_Pin) {
+	  weight_display_show_raw_adc_val(&wdisplay);
+      weight_display_zero_weight(&wdisplay);
+  	  weight_display_show_raw_adc_val(&wdisplay);
+    } else if (GPIO_Pin == CAPTURE_WEIGHT_BTN_EXTI12_Pin) {
+        // weight_display_capture_weight(&wdisplay);
     }
 }
 

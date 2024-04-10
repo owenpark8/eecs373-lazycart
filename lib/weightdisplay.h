@@ -13,6 +13,9 @@
 typedef struct WeightDisplay {
     ADC_HandleTypeDef* ps_hadc;
     uint16_t ps_adc_val;
+    uint16_t ps_zero_offset;
+
+    uint16_t display_weight;
 
     ILI9225 ILI9225;
     char weight_char_buffer[WEIGHT_CHAR_BUFFER_LEN];
@@ -22,6 +25,8 @@ void weight_display_ctor(WeightDisplay* wdisplay, ADC_HandleTypeDef* hadc, SPI_H
     if (!wdisplay) Error_Handler();
     wdisplay->ps_hadc = hadc;
     HAL_ADC_Start_IT(hadc);
+
+    wdisplay->ps_zero_offset = 0;
 
     wdisplay->ILI9225.hspi = hspi;
     wdisplay->ILI9225.csx_port = csx_port;
@@ -57,11 +62,15 @@ void weight_display_start_read_psensor(WeightDisplay* wdisplay) {
 }
 
 void weight_display_psensor_adc_callback(WeightDisplay* wdisplay) {
-	wdisplay->ps_adc_val = HAL_ADC_GetValue(wdisplay->ps_hadc);
+	wdisplay->ps_adc_val = 4095 - HAL_ADC_GetValue(wdisplay->ps_hadc);
 }
 
-void weight_display_raw_adc_val(WeightDisplay* wdisplay) {
-	sprintf(wdisplay->weight_char_buffer, "%d", wdisplay->ps_adc_val);
+void weight_display_zero_weight(WeightDisplay* wdisplay) {
+    wdisplay->ps_zero_offset = wdisplay->ps_adc_val;
+}
+
+void weight_display_show_raw_adc_val(WeightDisplay* wdisplay) {
+	sprintf(wdisplay->weight_char_buffer, "%d", wdisplay->ps_adc_val - wdisplay->ps_zero_offset);
 	size_t null_terminator_idx = strlen(wdisplay->weight_char_buffer);
 	wdisplay->weight_char_buffer[null_terminator_idx] = 'o';
 	wdisplay->weight_char_buffer[null_terminator_idx+1] = 'z';
