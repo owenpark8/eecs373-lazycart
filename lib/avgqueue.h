@@ -16,7 +16,7 @@ typedef struct AvgQueue {
 	uint8_t size;
 } AvgQueue;
 
-void init(AvgQueue *q) {
+void avgqueue_ctor(AvgQueue *q) {
 	q->front = NULL;
 	q->last = NULL;
 	q->sum = 0;

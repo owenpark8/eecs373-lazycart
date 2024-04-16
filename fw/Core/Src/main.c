@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "pixy.h"
+#include "drive.h"
 #include "motor.h"
 #include "usonic.h"
 #include "servo.h"
@@ -56,14 +57,21 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim7;
+TIM_HandleTypeDef htim16;
 
 /* USER CODE BEGIN PV */
 #define ULT_SONIC_TRIGGER_TIMER &htim3
 #define R_SONIC_ECHO_TIM &htim2
 #define L_SONIC_ECHO_TIM &htim5
 #define SERVO_PWM_TIMER &htim4
-#define MOTOR_PWM_TIMER &htim4
 
+#define MOTOR_PWM_TIMER &htim4
+#define MOTOR_UPDATE_TIMER &htim16
+
+#define PIXY_CENTER_VAL 157
+#define PIXY_CENTER_THRESHOLD 50
+#define PIXY_WIDTH_THRESHOLD 50
+#define PIXY_HEIGHT_THRESHOLD 5
 #define PIXY_UPDATE_TIMER &htim7
 
 Pixy pixy;
@@ -85,12 +93,30 @@ static void MX_TIM4_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void update_motors() {
+  get_blocks_i2c(&pixy);
+  uint16_t subject_x_pos = get_x(&pixy);
+  if (subject_x_pos > PIXY_CENTER_VAL + PIXY_CENTER_THRESHOLD) {
+	spin_right(&left_motor, &right_motor);
+  } else if (subject_x_pos < PIXY_CENTER_VAL - PIXY_CENTER_THRESHOLD) {
+	spin_left(&left_motor, &right_motor);
+  } else {
+    uint16_t subject_block_width = get_block_width(&pixy);
+    uint16_t subject_block_height = get_block_height(&pixy);
+    if (subject_block_width > PIXY_WIDTH_THRESHOLD && subject_block_height > PIXY_HEIGHT_THRESHOLD) {
+      stop_drive(&left_motor, &right_motor);
+    } else {
+      drive_forward(&left_motor, &right_motor);
+    }
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -131,23 +157,30 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM7_Init();
   MX_ADC1_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
-   pixy_ctor(&pixy, &hi2c1, PIXY_UPDATE_TIMER);
+   pixy_ctor(&pixy, &hi2c1);
    motor_ctor(&right_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_4, R_FORWARD_GPIO_Port, R_FORWARD_Pin, R_BACKWARD_GPIO_Port, R_BACKWARD_Pin);
-   motor_ctor(&left_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_3, GPIOF, GPIO_PIN_15, GPIOG, GPIO_PIN_0);
+   motor_ctor(&left_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_3, L_FORWARD_GPIO_Port, L_FORWARD_Pin, L_BACKWARD_GPIO_Port, L_BACKWARD_Pin);
    usonic_ctor(&right_usonic);
    weight_display_ctor(&wdisplay, &hadc1, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
+   start_pwm(&right_motor);
+   start_pwm(&left_motor);
+
+  // if (HAL_TIM_Base_Start_IT(PIXY_UPDATE_TIMER) != HAL_OK) Error_Handler();
+  if (HAL_TIM_Base_Start_IT(MOTOR_UPDATE_TIMER) != HAL_OK) Error_Handler();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  weight_display_credits(&wdisplay);
-  HAL_Delay(1000);
-  weight_display_clear(&wdisplay);
+ weight_display_credits(&wdisplay);
+ HAL_Delay(1000);
+ weight_display_clear(&wdisplay);
   while (1)
   {
-	  weight_display_start_read_psensor(&wdisplay);
-	  HAL_Delay(1000);
+	  // weight_display_start_read_psensor(&wdisplay);
+	  // HAL_Delay(1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -591,7 +624,7 @@ static void MX_TIM7_Init(void)
   htim7.Instance = TIM7;
   htim7.Init.Prescaler = 319;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 1999;
+  htim7.Init.Period = 999;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
@@ -606,6 +639,38 @@ static void MX_TIM7_Init(void)
   /* USER CODE BEGIN TIM7_Init 2 */
 
   /* USER CODE END TIM7_Init 2 */
+
+}
+
+/**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 319;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 4999;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
 
 }
 
@@ -632,13 +697,13 @@ static void MX_GPIO_Init(void)
   HAL_PWREx_EnableVddIO2();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOF, DISP_RS_Pin|L_FORWARD_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOF, DISP_RS_Pin|L_FORWARD_Pin|L_BACKWARD_Pin|R_FORWARD_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(R_BACKWARD_GPIO_Port, R_BACKWARD_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(DISP_CMD_GPIO_Port, DISP_CMD_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, R_FORWARD_Pin|R_BACKWARD_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(DISP_CS_GPIO_Port, DISP_CS_Pin, GPIO_PIN_SET);
@@ -659,8 +724,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF4_I2C2;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DISP_RS_Pin L_FORWARD_Pin */
-  GPIO_InitStruct.Pin = DISP_RS_Pin|L_FORWARD_Pin;
+  /*Configure GPIO pins : DISP_RS_Pin L_FORWARD_Pin L_BACKWARD_Pin R_FORWARD_Pin */
+  GPIO_InitStruct.Pin = DISP_RS_Pin|L_FORWARD_Pin|L_BACKWARD_Pin|R_FORWARD_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -686,11 +751,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(CAPTURE_WEIGHT_BTN_EXTI12_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : L_BACKWARD_Pin */
-  GPIO_InitStruct.Pin = L_BACKWARD_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pin : R_BACKWARD_Pin */
+  GPIO_InitStruct.Pin = R_BACKWARD_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(L_BACKWARD_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(R_BACKWARD_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PE7 PE8 PE9 PE10
                            PE11 PE12 PE13 */
@@ -813,12 +879,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF6_SPI3;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : R_FORWARD_Pin R_BACKWARD_Pin DISP_CS_Pin */
-  GPIO_InitStruct.Pin = R_FORWARD_Pin|R_BACKWARD_Pin|DISP_CS_Pin;
+  /*Configure GPIO pin : DISP_CS_Pin */
+  GPIO_InitStruct.Pin = DISP_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(DISP_CS_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
@@ -842,7 +908,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
     if (htim == PIXY_UPDATE_TIMER) {
-        get_blocks_i2c(&pixy);
+//        get_blocks_i2c(&pixy);
+    } else if (htim == MOTOR_UPDATE_TIMER) {
+    	update_motors();
     }
 }
 

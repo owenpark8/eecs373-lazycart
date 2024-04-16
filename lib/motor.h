@@ -28,7 +28,6 @@ void motor_ctor(Motor* motor, TIM_HandleTypeDef *pwm_tim, uint32_t pwm_tim_chann
     HAL_GPIO_WritePin(backward_gpiox, backward_pin, GPIO_PIN_RESET);
 }
 
-// TODO:
 void set_pwm_ccr(Motor* motor, uint32_t ccr_val) {
     __HAL_TIM_SET_COMPARE(motor->pwm_tim, motor->pwm_tim_channel, ccr_val);
 }
@@ -59,13 +58,6 @@ void set_direction_backward(Motor* motor) {
     HAL_GPIO_WritePin(motor->forward_gpio, motor->forward_pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(motor->backward_gpio, motor->backward_pin, GPIO_PIN_SET);
 }
-
-void motor_dtor(Motor* motor) {
-    stop_pwm(motor);
-    free(motor);
-}
-
-
 
 
 #endif

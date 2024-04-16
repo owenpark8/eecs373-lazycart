@@ -14,13 +14,10 @@ typedef struct USonic {
 
 void usonic_ctor(USonic* usonic) {
     if (!usonic) Error_Handler();
-    init(&usonic->last_five_values);
+    avgqueue_ctor(&usonic->last_five_values);
     for (int i = 0; i < 5; ++i) {
         push(&usonic->last_five_values, 0U);
     }
-}
-void usonic_dtor(USonic* usonic) {
-    free(usonic);
 }
 
 // __HAL_TIM_SET_CAPTUREPOLARITY()
