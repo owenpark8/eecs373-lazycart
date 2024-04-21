@@ -13,11 +13,9 @@
 
 typedef struct WeightDisplay {
     ADC_HandleTypeDef* ps_hadc;
-    uint16_t ps_adc_val;
+    // uint16_t ps_adc_val;
     uint16_t ps_zero_offset;
-
-    uint16_t display_weight;
-
+    uint16_t weight;
     ILI9225 ILI9225;
     char weight_char_buffer[WEIGHT_CHAR_BUFFER_LEN];
 } WeightDisplay;
@@ -64,15 +62,16 @@ void weight_display_start_read_psensor(WeightDisplay* wdisplay) {
 
 void weight_display_psensor_adc_callback(WeightDisplay* wdisplay) {
 	// Best Fit line = 88.8e^-1.01E-03x
-	wdisplay->ps_adc_val = 88.8*pow(2.718,-.00101*HAL_ADC_GetValue(wdisplay->ps_hadc));
+    HAL_ADC_PollForConversion(wdisplay->ps_hadc, 0xFFFFFFFF);
+	wdisplay->weight = 88.8*pow(2.718,-.00101*HAL_ADC_GetValue(wdisplay->ps_hadc));
 }
 
 void weight_display_zero_weight(WeightDisplay* wdisplay) {
-    wdisplay->ps_zero_offset = wdisplay->ps_adc_val;
+    wdisplay->ps_zero_offset = wdisplay->weight;
 }
 
-void weight_display_show_raw_adc_val(WeightDisplay* wdisplay) {
-	sprintf(wdisplay->weight_char_buffer, "%d", wdisplay->ps_adc_val - wdisplay->ps_zero_offset);
+void weight_display_show_weight(WeightDisplay* wdisplay) {
+	sprintf(wdisplay->weight_char_buffer, "%d", wdisplay->weight - wdisplay->ps_zero_offset);
 	size_t null_terminator_idx = strlen(wdisplay->weight_char_buffer);
 	wdisplay->weight_char_buffer[null_terminator_idx] = 'o';
 	wdisplay->weight_char_buffer[null_terminator_idx+1] = 'z';
@@ -80,5 +79,4 @@ void weight_display_show_raw_adc_val(WeightDisplay* wdisplay) {
 	weight_display_clear(wdisplay);
     draw_string(&wdisplay->ILI9225, 30, 70, COLOR_BLACK, 3, wdisplay->weight_char_buffer);
 }
-
 #endif

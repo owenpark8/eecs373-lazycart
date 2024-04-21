@@ -916,11 +916,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     if (GPIO_Pin == ZERO_WEIGHT_BTN_EXTI2_Pin) {
-	  weight_display_show_raw_adc_val(&wdisplay);
+      weight_display_start_read_psensor(&wdisplay);
+	    weight_display_show_weight(&wdisplay);
       weight_display_zero_weight(&wdisplay);
-  	  weight_display_show_raw_adc_val(&wdisplay);
+  	  weight_display_show_weight(&wdisplay);
     } else if (GPIO_Pin == CAPTURE_WEIGHT_BTN_EXTI12_Pin) {
-        // weight_display_capture_weight(&wdisplay);
+      weight_display_start_read_psensor(&wdisplay);
+      weight_display_show_weight(&wdisplay);
     }
 }
 
