@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #define WEIGHT_CHAR_BUFFER_LEN 5+2+1 // 5 digits for 16 bit number + oz for ounces + null terminator
 
@@ -62,7 +63,8 @@ void weight_display_start_read_psensor(WeightDisplay* wdisplay) {
 }
 
 void weight_display_psensor_adc_callback(WeightDisplay* wdisplay) {
-	wdisplay->ps_adc_val = 4095 - HAL_ADC_GetValue(wdisplay->ps_hadc);
+	// Best Fit line = 88.8e^-1.01E-03x
+	wdisplay->ps_adc_val = 88.8*pow(2.718,-.00101*HAL_ADC_GetValue(wdisplay->ps_hadc));
 }
 
 void weight_display_zero_weight(WeightDisplay* wdisplay) {
