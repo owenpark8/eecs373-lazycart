@@ -71,7 +71,14 @@ void weight_display_zero_weight(WeightDisplay* wdisplay) {
 }
 
 void weight_display_show_weight(WeightDisplay* wdisplay) {
-	sprintf(wdisplay->weight_char_buffer, "%d", wdisplay->weight - wdisplay->ps_zero_offset);
+    uint16_t adjusted_weight;
+    if (wdisplay->weight < wdisplay->ps_zero_offset) {
+        adjusted_weight = 0;
+    } else {
+        adjusted_weight = wdisplay->weight - wdisplay->ps_zero_offset;
+    }
+
+	sprintf(wdisplay->weight_char_buffer, "%d", adjusted_weight);
 	size_t null_terminator_idx = strlen(wdisplay->weight_char_buffer);
 	wdisplay->weight_char_buffer[null_terminator_idx] = 'o';
 	wdisplay->weight_char_buffer[null_terminator_idx+1] = 'z';
