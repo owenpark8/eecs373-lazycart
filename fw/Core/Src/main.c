@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "pixy.h"
 #include "drive.h"
+#include "ir.h"
 #include "motor.h"
 #include "usonic.h"
 #include "servo.h"
@@ -72,13 +73,21 @@ TIM_HandleTypeDef htim16;
 #define PIXY_CENTER_THRESHOLD 50
 #define PIXY_WIDTH_THRESHOLD 50
 #define PIXY_HEIGHT_THRESHOLD 5
-#define PIXY_UPDATE_TIMER &htim7
+
+#define IR_UPDATE_TIMER &htim7
+#define IR_STOP_THRESHOLD 500
 
 Pixy pixy;
 Motor right_motor;
 Motor left_motor;
+USonic left_usonic;
 USonic right_usonic;
+Servo left_servo;
+Servo right_servo;
 WeightDisplay wdisplay;
+IR ir;
+
+uint8_t IR_STOP_FLAG = 0;
 
 /* USER CODE END PV */
 
@@ -101,6 +110,10 @@ static void MX_TIM16_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void update_motors() {
+  if (IR_STOP_FLAG == 1) {
+    stop_drive(&left_motor, &right_motor);
+    return;
+  }
   get_blocks_i2c(&pixy);
   uint16_t subject_x_pos = get_x(&pixy);
   if (subject_x_pos > PIXY_CENTER_VAL + PIXY_CENTER_THRESHOLD) {
@@ -159,28 +172,48 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
-   pixy_ctor(&pixy, &hi2c1);
-   motor_ctor(&right_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_4, R_FORWARD_GPIO_Port, R_FORWARD_Pin, R_BACKWARD_GPIO_Port, R_BACKWARD_Pin);
-   motor_ctor(&left_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_3, L_FORWARD_GPIO_Port, L_FORWARD_Pin, L_BACKWARD_GPIO_Port, L_BACKWARD_Pin);
-   usonic_ctor(&right_usonic);
-   weight_display_ctor(&wdisplay, &hadc1, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
-   start_pwm(&right_motor);
-   start_pwm(&left_motor);
+  weight_display_ctor(&wdisplay, &hadc1, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
+  weight_display_credits(&wdisplay);
+  HAL_Delay(1000);
+  weight_display_clear(&wdisplay);
 
-  // if (HAL_TIM_Base_Start_IT(PIXY_UPDATE_TIMER) != HAL_OK) Error_Handler();
+  pixy_ctor(&pixy, &hi2c1);
+  usonic_ctor(&left_usonic, ULT_SONIC_TRIGGER_TIMER, TIM_CHANNEL_2, L_SONIC_ECHO_TIM, TIM_CHANNEL_1);
+  usonic_ctor(&right_usonic, ULT_SONIC_TRIGGER_TIMER, TIM_CHANNEL_2, R_SONIC_ECHO_TIM, TIM_CHANNEL_1);
+  usonic_start_pwm(&left_usonic);
+  usonic_start_capture(&left_usonic);
+  usonic_start_capture(&right_usonic);
+
+  motor_ctor(&right_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_4, R_FORWARD_GPIO_Port, R_FORWARD_Pin, R_BACKWARD_GPIO_Port, R_BACKWARD_Pin);
+  motor_ctor(&left_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_3, L_FORWARD_GPIO_Port, L_FORWARD_Pin, L_BACKWARD_GPIO_Port, L_BACKWARD_Pin);
+  start_motor_pwm(&right_motor);
+  start_motor_pwm(&left_motor);
+
+  servo_ctor(&left_servo, SERVO_PWM_TIMER, TIM_CHANNEL_1);
+  servo_ctor(&right_servo, SERVO_PWM_TIMER, TIM_CHANNEL_2);
+  servo_start_pwm(&left_servo);
+  servo_start_pwm(&right_servo);
+
+  ir_ctor(&ir, &hadc1);
+
+  if (HAL_TIM_Base_Start_IT(IR_UPDATE_TIMER) != HAL_OK) Error_Handler();
   if (HAL_TIM_Base_Start_IT(MOTOR_UPDATE_TIMER) != HAL_OK) Error_Handler();
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
- weight_display_credits(&wdisplay);
- HAL_Delay(1000);
- weight_display_clear(&wdisplay);
   while (1)
   {
 	  // weight_display_start_read_psensor(&wdisplay);
 	  // HAL_Delay(1000);
+    // if (usonic_get_distance(&left_usonic) + 300 < usonic_get_distance(&right_usonic)) {
+    //   spin_left(&left_motor, &right_motor);
+    // } else if (usonic_get_distance(&right_usonic) + 300 < usonic_get_distance(&left_usonic)) {
+    //   spin_right(&left_motor, &right_motor);
+    // } else {
+    //   drive_forward(&left_motor, &right_motor);
+    // }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -274,7 +307,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_2;
+  sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -901,14 +934,15 @@ static void MX_GPIO_Init(void)
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
   if (htim == L_SONIC_ECHO_TIM) {
+    usonic_echo_callback(&left_usonic);
   } else if (htim == R_SONIC_ECHO_TIM) {
-
+    usonic_echo_callback(&right_usonic);
   }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
-    if (htim == PIXY_UPDATE_TIMER) {
-//        get_blocks_i2c(&pixy);
+    if (htim == IR_UPDATE_TIMER) {
+    	ir_start_read(&ir);
     } else if (htim == MOTOR_UPDATE_TIMER) {
     	update_motors();
     }
@@ -927,7 +961,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	weight_display_psensor_adc_callback(&wdisplay);
+	// weight_display_psensor_adc_callback(&wdisplay);
+  ir_adc_callback(&ir);
+  if (ir_get_value(&ir) > IR_STOP_THRESHOLD) {
+    IR_STOP_FLAG = 1;
+  } else {
+    IR_STOP_FLAG = 0;
+  }
 }
 
 /* USER CODE END 4 */

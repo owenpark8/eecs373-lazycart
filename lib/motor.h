@@ -32,7 +32,8 @@ void set_pwm_ccr(Motor* motor, uint32_t ccr_val) {
     __HAL_TIM_SET_COMPARE(motor->pwm_tim, motor->pwm_tim_channel, ccr_val);
 }
 
-void start_pwm(Motor* motor) {
+void start_motor_pwm(Motor* motor) {
+	HAL_TIM_PWM_Stop(motor->pwm_tim, motor->pwm_tim_channel);
     HAL_TIM_PWM_Start(motor->pwm_tim, motor->pwm_tim_channel);
 }
 

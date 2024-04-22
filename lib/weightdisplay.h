@@ -23,8 +23,6 @@ typedef struct WeightDisplay {
 void weight_display_ctor(WeightDisplay* wdisplay, ADC_HandleTypeDef* hadc, SPI_HandleTypeDef* hspi, GPIO_TypeDef* csx_port, uint16_t csx_pin, GPIO_TypeDef* resx_port, uint16_t resx_pin, GPIO_TypeDef* cmd_port, uint16_t cmd_pin) {
     if (!wdisplay) Error_Handler();
     wdisplay->ps_hadc = hadc;
-    HAL_ADC_Start_IT(hadc);
-
     wdisplay->ps_zero_offset = 0;
 
     wdisplay->ILI9225.hspi = hspi;
@@ -35,10 +33,6 @@ void weight_display_ctor(WeightDisplay* wdisplay, ADC_HandleTypeDef* hadc, SPI_H
     wdisplay->ILI9225.cmd_port = cmd_port;
     wdisplay->ILI9225.cmd_pin = cmd_pin;
     lcd_init(&wdisplay->ILI9225);
-}
-
-void weight_display_dtor(WeightDisplay* wdisplay) {
-	HAL_ADC_Stop_DMA(wdisplay->ps_hadc);
 }
 
 void weight_display_credits(WeightDisplay* wdisplay){
@@ -62,7 +56,6 @@ void weight_display_start_read_psensor(WeightDisplay* wdisplay) {
 
 void weight_display_psensor_adc_callback(WeightDisplay* wdisplay) {
 	// Best Fit line = 88.8e^-1.01E-03x
-    HAL_ADC_PollForConversion(wdisplay->ps_hadc, 0xFFFFFFFF);
 	wdisplay->weight = 88.8*pow(2.718,-.00101*HAL_ADC_GetValue(wdisplay->ps_hadc));
 }
 

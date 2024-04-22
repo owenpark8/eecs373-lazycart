@@ -63,8 +63,10 @@ void Error_Handler(void);
 #define DISP_RS_GPIO_Port GPIOF
 #define USONIC_L_ECHO_Pin GPIO_PIN_6
 #define USONIC_L_ECHO_GPIO_Port GPIOF
-#define PRESSURE_ADC_IN1_Pin GPIO_PIN_0
-#define PRESSURE_ADC_IN1_GPIO_Port GPIOC
+#define IR_ADC_IN1_Pin GPIO_PIN_0
+#define IR_ADC_IN1_GPIO_Port GPIOC
+#define PS_ADC_IN2_Pin GPIO_PIN_1
+#define PS_ADC_IN2_GPIO_Port GPIOC
 #define USONIC_R_ECHO_Pin GPIO_PIN_0
 #define USONIC_R_ECHO_GPIO_Port GPIOA
 #define ZERO_WEIGHT_BTN_EXTI2_Pin GPIO_PIN_2

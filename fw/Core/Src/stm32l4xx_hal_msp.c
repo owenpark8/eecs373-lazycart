@@ -72,6 +72,8 @@ void HAL_MspInit(void)
   __HAL_RCC_SYSCFG_CLK_ENABLE();
   __HAL_RCC_PWR_CLK_ENABLE();
 
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_3);
+
   /* System interrupt init*/
 
   /* USER CODE BEGIN MspInit 1 */
@@ -128,7 +130,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     PC5     ------> ADC1_IN14
     PB1     ------> ADC1_IN16
     */
-    GPIO_InitStruct.Pin = PRESSURE_ADC_IN1_Pin|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+    GPIO_InitStruct.Pin = IR_ADC_IN1_Pin|PS_ADC_IN2_Pin|GPIO_PIN_2|GPIO_PIN_3
                           |GPIO_PIN_4|GPIO_PIN_5;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG_ADC_CONTROL;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -181,7 +183,7 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
     PC5     ------> ADC1_IN14
     PB1     ------> ADC1_IN16
     */
-    HAL_GPIO_DeInit(GPIOC, PRESSURE_ADC_IN1_Pin|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+    HAL_GPIO_DeInit(GPIOC, IR_ADC_IN1_Pin|PS_ADC_IN2_Pin|GPIO_PIN_2|GPIO_PIN_3
                           |GPIO_PIN_4|GPIO_PIN_5);
 
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_1|GPIO_PIN_3);
