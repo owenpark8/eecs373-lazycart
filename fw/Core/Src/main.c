@@ -21,9 +21,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
 #include "pixy.h"
 #include "drive.h"
-#include "ir.h"
 #include "motor.h"
 #include "usonic.h"
 #include "servo.h"
@@ -74,8 +74,8 @@ TIM_HandleTypeDef htim16;
 #define PIXY_WIDTH_THRESHOLD 50
 #define PIXY_HEIGHT_THRESHOLD 5
 
-#define IR_UPDATE_TIMER &htim7
-#define IR_STOP_THRESHOLD 500
+#define ADC_UPDATE_TIMER &htim7
+#define IR_STOP_THRESHOLD 2200
 
 Pixy pixy;
 Motor right_motor;
@@ -85,9 +85,12 @@ USonic right_usonic;
 Servo left_servo;
 Servo right_servo;
 WeightDisplay wdisplay;
-IR ir;
 
-uint8_t IR_STOP_FLAG = 0;
+int IR_STOP_FLAG = 0;
+int STOP_BTN_STATE = 1;
+
+int weight = 0;
+int zero_weight = 0;
 
 /* USER CODE END PV */
 
@@ -109,27 +112,6 @@ static void MX_TIM16_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void update_motors() {
-  if (IR_STOP_FLAG == 1) {
-    stop_drive(&left_motor, &right_motor);
-    return;
-  }
-  get_blocks_i2c(&pixy);
-  uint16_t subject_x_pos = get_x(&pixy);
-  if (subject_x_pos > PIXY_CENTER_VAL + PIXY_CENTER_THRESHOLD) {
-	spin_right(&left_motor, &right_motor);
-  } else if (subject_x_pos < PIXY_CENTER_VAL - PIXY_CENTER_THRESHOLD) {
-	spin_left(&left_motor, &right_motor);
-  } else {
-    uint16_t subject_block_width = get_block_width(&pixy);
-    uint16_t subject_block_height = get_block_height(&pixy);
-    if (subject_block_width > PIXY_WIDTH_THRESHOLD && subject_block_height > PIXY_HEIGHT_THRESHOLD) {
-      stop_drive(&left_motor, &right_motor);
-    } else {
-      drive_forward(&left_motor, &right_motor);
-    }
-  }
-}
 
 /* USER CODE END 0 */
 
@@ -172,17 +154,18 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
-  weight_display_ctor(&wdisplay, &hadc1, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
-  weight_display_credits(&wdisplay);
-  HAL_Delay(1000);
-  weight_display_clear(&wdisplay);
+   weight_display_ctor(&wdisplay, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
+   weight_display_credits(&wdisplay);
+   HAL_Delay(1000);
+   weight_display_clear(&wdisplay);
 
   pixy_ctor(&pixy, &hi2c1);
   usonic_ctor(&left_usonic, ULT_SONIC_TRIGGER_TIMER, TIM_CHANNEL_2, L_SONIC_ECHO_TIM, TIM_CHANNEL_1);
   usonic_ctor(&right_usonic, ULT_SONIC_TRIGGER_TIMER, TIM_CHANNEL_2, R_SONIC_ECHO_TIM, TIM_CHANNEL_1);
-  usonic_start_pwm(&left_usonic);
-  usonic_start_capture(&left_usonic);
-  usonic_start_capture(&right_usonic);
+  HAL_TIM_PWM_Start(ULT_SONIC_TRIGGER_TIMER, TIM_CHANNEL_2);
+  HAL_TIM_IC_Start_IT(L_SONIC_ECHO_TIM, TIM_CHANNEL_1);
+  HAL_TIM_IC_Start_IT(R_SONIC_ECHO_TIM, TIM_CHANNEL_1);
+
 
   motor_ctor(&right_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_4, R_FORWARD_GPIO_Port, R_FORWARD_Pin, R_BACKWARD_GPIO_Port, R_BACKWARD_Pin);
   motor_ctor(&left_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_3, L_FORWARD_GPIO_Port, L_FORWARD_Pin, L_BACKWARD_GPIO_Port, L_BACKWARD_Pin);
@@ -194,10 +177,13 @@ int main(void)
   servo_start_pwm(&left_servo);
   servo_start_pwm(&right_servo);
 
-  ir_ctor(&ir, &hadc1);
+  servo_set_ninety_deg(&left_servo);
+  servo_set_ninety_deg(&right_servo);
 
-  if (HAL_TIM_Base_Start_IT(IR_UPDATE_TIMER) != HAL_OK) Error_Handler();
-  if (HAL_TIM_Base_Start_IT(MOTOR_UPDATE_TIMER) != HAL_OK) Error_Handler();
+//  if (HAL_TIM_Base_Start_IT(ADC_UPDATE_TIMER) != HAL_OK) Error_Handler();
+//  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 1);
+		HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_SET);
+
 
   /* USER CODE END 2 */
 
@@ -205,15 +191,49 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  // weight_display_start_read_psensor(&wdisplay);
-	  // HAL_Delay(1000);
-    // if (usonic_get_distance(&left_usonic) + 300 < usonic_get_distance(&right_usonic)) {
-    //   spin_left(&left_motor, &right_motor);
-    // } else if (usonic_get_distance(&right_usonic) + 300 < usonic_get_distance(&left_usonic)) {
-    //   spin_right(&left_motor, &right_motor);
-    // } else {
-    //   drive_forward(&left_motor, &right_motor);
-    // }
+    HAL_ADC_Start(&hadc1);
+	  if (IR_STOP_FLAG == 1 || STOP_BTN_STATE == 1) {
+	    stop_drive(&left_motor, &right_motor);
+	  } else {
+      get_blocks_i2c(&pixy);
+      uint16_t subject_x_pos = get_x(&pixy);
+      if (subject_x_pos > PIXY_CENTER_VAL + PIXY_CENTER_THRESHOLD) {
+        spin_right(&left_motor, &right_motor);
+      } else if (subject_x_pos < PIXY_CENTER_VAL - PIXY_CENTER_THRESHOLD) {
+        spin_left(&left_motor, &right_motor);
+      } else {
+        uint16_t subject_block_width = get_block_width(&pixy);
+        uint16_t subject_block_height = get_block_height(&pixy);
+        if (subject_block_width > PIXY_WIDTH_THRESHOLD && subject_block_height > PIXY_HEIGHT_THRESHOLD) {
+          stop_drive(&left_motor, &right_motor);
+        } else {
+          drive_forward(&left_motor, &right_motor);
+        }
+      }
+	  }
+    if (left_usonic.pulse_width < right_usonic.pulse_width + 300) {
+    if (left_servo.ccr > 40){
+      servo_set_pwm_ccr(&left_servo, left_servo.ccr - 3);
+      servo_set_pwm_ccr(&right_servo, right_servo.ccr - 3);
+    }
+    } else if (right_usonic.pulse_width < left_usonic.pulse_width + 300) {
+    if (right_servo.ccr < 110){
+      servo_set_pwm_ccr(&left_servo, left_servo.ccr + 3);
+      servo_set_pwm_ccr(&right_servo, right_servo.ccr + 3);
+    }
+    }
+    HAL_Delay(400);
+    HAL_ADC_PollForConversion(&hadc1, 100);
+    uint16_t adc_val = HAL_ADC_GetValue(&hadc1);
+    if (adc_val > IR_STOP_THRESHOLD) {
+      IR_STOP_FLAG = 1;
+    } else {
+      IR_STOP_FLAG = 0;
+    }
+    HAL_ADC_Stop(&hadc1);
+
+
+	HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_SET);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -307,10 +327,10 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Channel = ADC_CHANNEL_2;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
-  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.SingleDiff = ADC_DIFFERENTIAL_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -733,6 +753,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOF, DISP_RS_Pin|L_FORWARD_Pin|L_BACKWARD_Pin|R_FORWARD_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(R_BACKWARD_GPIO_Port, R_BACKWARD_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -771,6 +794,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF13_SAI1;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : ADC_MUX_S0_Pin */
+  GPIO_InitStruct.Pin = ADC_MUX_S0_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(ADC_MUX_S0_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : STOP_BTN_EXTI3_Pin */
+  GPIO_InitStruct.Pin = STOP_BTN_EXTI3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(STOP_BTN_EXTI3_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : ZERO_WEIGHT_BTN_EXTI2_Pin */
   GPIO_InitStruct.Pin = ZERO_WEIGHT_BTN_EXTI2_Pin;
@@ -923,6 +959,9 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI2_IRQn);
 
+  HAL_NVIC_SetPriority(EXTI3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
@@ -933,40 +972,55 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
+	static uint8_t l_usonic_capture_state = 0;
+	static uint8_t r_usonic_capture_state = 0;
   if (htim == L_SONIC_ECHO_TIM) {
-    usonic_echo_callback(&left_usonic);
+	  if (l_usonic_capture_state == 0) {
+		  l_usonic_capture_state = 1;
+      __HAL_TIM_SET_CAPTUREPOLARITY(L_SONIC_ECHO_TIM, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_FALLING);
+      __HAL_TIM_SET_COUNTER(L_SONIC_ECHO_TIM, 0);
+	  } else {
+      __HAL_TIM_SET_CAPTUREPOLARITY(L_SONIC_ECHO_TIM, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
+      left_usonic.pulse_width = __HAL_TIM_GET_COUNTER(L_SONIC_ECHO_TIM);
+      l_usonic_capture_state = 0;
+	  }
   } else if (htim == R_SONIC_ECHO_TIM) {
-    usonic_echo_callback(&right_usonic);
+    if (r_usonic_capture_state == 0) {
+      r_usonic_capture_state = 1;
+      __HAL_TIM_SET_CAPTUREPOLARITY(R_SONIC_ECHO_TIM, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_FALLING);
+      __HAL_TIM_SET_COUNTER(R_SONIC_ECHO_TIM, 0);
+    } else {
+      __HAL_TIM_SET_CAPTUREPOLARITY(R_SONIC_ECHO_TIM, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
+      right_usonic.pulse_width = __HAL_TIM_GET_COUNTER(R_SONIC_ECHO_TIM);
+      r_usonic_capture_state = 0;
+  }
   }
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
-    if (htim == IR_UPDATE_TIMER) {
-    	ir_start_read(&ir);
-    } else if (htim == MOTOR_UPDATE_TIMER) {
-    	update_motors();
-    }
-}
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    if (GPIO_Pin == ZERO_WEIGHT_BTN_EXTI2_Pin) {
-      weight_display_start_read_psensor(&wdisplay);
-	    weight_display_show_weight(&wdisplay);
-      weight_display_zero_weight(&wdisplay);
-  	  weight_display_show_weight(&wdisplay);
-    } else if (GPIO_Pin == CAPTURE_WEIGHT_BTN_EXTI12_Pin) {
-      weight_display_start_read_psensor(&wdisplay);
-      weight_display_show_weight(&wdisplay);
+	if (GPIO_Pin == STOP_BTN_EXTI3_Pin) {
+		  STOP_BTN_STATE = !STOP_BTN_STATE;
+	}
+	else if (GPIO_Pin == ZERO_WEIGHT_BTN_EXTI2_Pin) {
+		HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_RESET);
+    HAL_ADC_Start(&hadc1);
+    HAL_ADC_PollForConversion(&hadc1, 100);
+    int adc_val = HAL_ADC_GetValue(&hadc1);
+		zero_weight = 100*pow(2.718,-.00101*adc_val);
+		HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_SET);
+  }
+  else if (GPIO_Pin == CAPTURE_WEIGHT_BTN_EXTI12_Pin) {
+    HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_RESET);
+    HAL_ADC_Start(&hadc1);
+    HAL_ADC_PollForConversion(&hadc1, 100);
+    int adc_val = HAL_ADC_GetValue(&hadc1);
+    int converted_weight = 100*pow(2.718,-.00101*adc_val);
+    HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_SET);
+    int display_weight = converted_weight - zero_weight;
+    if (display_weight < 0) {
+      display_weight = 0;
     }
-}
-
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	// weight_display_psensor_adc_callback(&wdisplay);
-  ir_adc_callback(&ir);
-  if (ir_get_value(&ir) > IR_STOP_THRESHOLD) {
-    IR_STOP_FLAG = 1;
-  } else {
-    IR_STOP_FLAG = 0;
+    weight_display_show_weight(&wdisplay, display_weight);
   }
 }
 

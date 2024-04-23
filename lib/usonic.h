@@ -12,6 +12,7 @@ typedef struct USonic {
     uint32_t trigger_tim_channel;
     uint32_t echo_tim_channel;
     AvgQueue last_five_values;
+    uint32_t pulse_width;
     uint8_t capture_state; // 0 for rising edge, 1 for falling edge
 } USonic;
 
@@ -22,10 +23,11 @@ void usonic_ctor(USonic* usonic, TIM_HandleTypeDef* trigger_tim, uint32_t trigge
     usonic->trigger_tim_channel = trigger_tim_channel;
     usonic->echo_tim_channel = echo_tim_channel;
     usonic->capture_state = 0;
-    avgqueue_ctor(&usonic->last_five_values);
-    for (int i = 0; i < 5; ++i) {
-        push(&usonic->last_five_values, 0U);
-    }
+    usonic->pulse_width = 0;
+    // avgqueue_ctor(&usonic->last_five_values);
+    // for (int i = 0; i < 5; ++i) {
+    //     push(&usonic->last_five_values, 0U);
+    // }
 }
 
 void usonic_start_pwm(USonic* usonic) {
@@ -42,22 +44,22 @@ void usonic_start_capture(USonic* usonic) {
 }
 
 void usonic_echo_callback(USonic* usonic) {
-    uint32_t pulse_width;
     if (usonic->capture_state == 0) {
         __HAL_TIM_SET_CAPTUREPOLARITY(usonic->echo_tim, usonic->echo_tim_channel, TIM_INPUTCHANNELPOLARITY_FALLING);
         __HAL_TIM_SET_COUNTER(usonic->echo_tim, 0);
         usonic->capture_state = 1;
     } else {
         __HAL_TIM_SET_CAPTUREPOLARITY(usonic->echo_tim, usonic->echo_tim_channel, TIM_INPUTCHANNELPOLARITY_RISING);
-        pulse_width = __HAL_TIM_GET_COUNTER(usonic->echo_tim);
+        usonic->pulse_width = __HAL_TIM_GET_COUNTER(usonic->echo_tim);
         usonic->capture_state = 0;
     }
-    push(&usonic->last_five_values, pulse_width);
-    pop(&usonic->last_five_values);
+    // push(&usonic->last_five_values, pulse_width);
+    // pop(&usonic->last_five_values);
 }
 
 uint32_t usonic_get_distance(USonic* usonic) {
-    return get_average(&usonic->last_five_values);
+    return usonic->pulse_width;
+    // return get_average(&usonic->last_five_values);
 }
 
 

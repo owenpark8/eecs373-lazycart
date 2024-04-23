@@ -19,6 +19,7 @@ void servo_ctor(Servo* servo, TIM_HandleTypeDef* pwm_tim, uint32_t pwm_tim_chann
     if (!servo) Error_Handler();
     servo->pwm_tim = pwm_tim;
     servo->pwm_tim_channel = pwm_tim_channel;
+    servo->ccr = 0;
 }
 
 void servo_start_pwm(Servo* servo) {
@@ -32,17 +33,21 @@ void servo_stop_pwm(Servo* servo) {
 
 void servo_set_pwm_ccr(Servo* servo, uint32_t ccr_val) {
     __HAL_TIM_SET_COMPARE(servo->pwm_tim, servo->pwm_tim_channel, ccr_val);
+    servo->ccr = ccr_val;
 }
 
 void servo_set_zero_deg(Servo* servo) {
+    servo->ccr = ZERO_DEG;
     servo_set_pwm_ccr(servo, ZERO_DEG);
 }
 
 void servo_set_ninety_deg(Servo* servo) {
+    servo->ccr = NINETY_DEG;
     servo_set_pwm_ccr(servo, NINETY_DEG);
 }
 
 void servo_set_one_eighty_deg(Servo* servo) {
+    servo->ccr = ONE_EIGHTY_DEG;
     servo_set_pwm_ccr(servo, ONE_EIGHTY_DEG);
 }
 

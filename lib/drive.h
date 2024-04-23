@@ -4,7 +4,7 @@
 #include "motor.h"
 
 #define SPIN_SPEED 600
-#define DRIVE_SPEED 500
+#define DRIVE_SPEED 450
 
 void spin_left(Motor* left, Motor* right) {
     set_pwm_ccr(left, SPIN_SPEED);
@@ -21,8 +21,8 @@ void spin_right(Motor* left, Motor* right) {
 }
 
 void drive_forward(Motor* left, Motor* right) {
-    set_pwm_ccr(left, 500);
-    set_pwm_ccr(right, 500);
+    set_pwm_ccr(left, DRIVE_SPEED);
+    set_pwm_ccr(right, DRIVE_SPEED);
     set_direction_forward(left);
     set_direction_forward(right);
 }
