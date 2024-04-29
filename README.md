@@ -4,7 +4,9 @@
 
 A fully autonomous prototype following shopping cart for EECS 373 - Embedded Systems at the University of Michigan.
 
-[ TODO: MORE INFORMATION ]
+## Summary
+
+![plot](./poster.png)
 
 ## Contributors
 
