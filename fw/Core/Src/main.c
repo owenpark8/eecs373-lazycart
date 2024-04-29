@@ -25,7 +25,6 @@
 #include "pixy.h"
 #include "drive.h"
 #include "motor.h"
-#include "usonic.h"
 #include "servo.h"
 #include "weightdisplay.h"
 
@@ -80,8 +79,6 @@ TIM_HandleTypeDef htim16;
 Pixy pixy;
 Motor right_motor;
 Motor left_motor;
-USonic left_usonic;
-USonic right_usonic;
 Servo left_servo;
 Servo right_servo;
 WeightDisplay wdisplay;
@@ -154,18 +151,16 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
-   weight_display_ctor(&wdisplay, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
-   weight_display_credits(&wdisplay);
-   HAL_Delay(1000);
-   weight_display_clear(&wdisplay);
+  weight_display_ctor(&wdisplay, &hspi1, GPIOB, GPIO_PIN_6, GPIOF, GPIO_PIN_5, GPIOD, GPIO_PIN_7);
+  weight_display_credits(&wdisplay);
+  HAL_Delay(1000);
+  weight_display_clear(&wdisplay);
 
   pixy_ctor(&pixy, &hi2c1);
-  usonic_ctor(&left_usonic, ULT_SONIC_TRIGGER_TIMER, TIM_CHANNEL_2, L_SONIC_ECHO_TIM, TIM_CHANNEL_1);
-  usonic_ctor(&right_usonic, ULT_SONIC_TRIGGER_TIMER, TIM_CHANNEL_2, R_SONIC_ECHO_TIM, TIM_CHANNEL_1);
+
   HAL_TIM_PWM_Start(ULT_SONIC_TRIGGER_TIMER, TIM_CHANNEL_2);
   HAL_TIM_IC_Start_IT(L_SONIC_ECHO_TIM, TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(R_SONIC_ECHO_TIM, TIM_CHANNEL_1);
-
 
   motor_ctor(&right_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_4, R_FORWARD_GPIO_Port, R_FORWARD_Pin, R_BACKWARD_GPIO_Port, R_BACKWARD_Pin);
   motor_ctor(&left_motor, MOTOR_PWM_TIMER, TIM_CHANNEL_3, L_FORWARD_GPIO_Port, L_FORWARD_Pin, L_BACKWARD_GPIO_Port, L_BACKWARD_Pin);
@@ -180,9 +175,7 @@ int main(void)
   servo_set_ninety_deg(&left_servo);
   servo_set_ninety_deg(&right_servo);
 
-//  if (HAL_TIM_Base_Start_IT(ADC_UPDATE_TIMER) != HAL_OK) Error_Handler();
-//  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 1);
-		HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_SET);
 
 
   /* USER CODE END 2 */
@@ -231,7 +224,6 @@ int main(void)
       IR_STOP_FLAG = 0;
     }
     HAL_ADC_Stop(&hadc1);
-
 
 	HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_SET);
     /* USER CODE END WHILE */
@@ -999,7 +991,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == STOP_BTN_EXTI3_Pin) {
-		  STOP_BTN_STATE = !STOP_BTN_STATE;
+    STOP_BTN_STATE = !STOP_BTN_STATE;
 	}
 	else if (GPIO_Pin == ZERO_WEIGHT_BTN_EXTI2_Pin) {
 		HAL_GPIO_WritePin(ADC_MUX_S0_GPIO_Port, ADC_MUX_S0_Pin, GPIO_PIN_RESET);
